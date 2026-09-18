@@ -30,6 +30,8 @@ Retourne uniquement un objet JSON avec exactement ces deux champs :
 - "intention" : l'intention détectée
 - "valeur" : la valeur importante à mémoriser, ou null si aucune valeur n'est présente
 
+Si l'utilisateur demande d'analyser un fichier, un document, un texte ou un contenu de fichier,
+utilise l'intention "analyze_file" et place le chemin, le nom du fichier ou le contenu pertinent dans "valeur".
 Pour une demande où l'utilisateur donne un nouveau nom à l'agent,
 utilise l'intention "change_name" et place le nom dans "valeur".
 Si l'utilisateur parle de changer le nom sans donner de nom précis,

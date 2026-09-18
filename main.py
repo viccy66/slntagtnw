@@ -6,8 +6,14 @@ if __name__ == "__main__":
     print(agent.welcome())
 
     while True:
-        question = input("Vous : ")
-        if question.strip().lower() in {"quit", "exit", "q"}:
+        question = input("Vous : ").strip()
+
+        if not question:
+            print("Aucune demande saisie. Aucune action effectuée.")
+            continue
+
+        if question.lower() in {"quit", "exit", "q"}:
             print("Au revoir !")
             break
+
         print(f"Agent : {agent.run(question)}")
