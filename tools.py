@@ -13,14 +13,13 @@ def tell_name() -> str:
     return "Je suis un agent autonome minimal."
 
 
-def ask_llm(prompt: str) -> str:
+def ask_llm(prompt: str, json_format: bool = False) -> str:
     client = Client(host="http://localhost:11434")
     response = client.generate(
         model="llama3.2",
         prompt=prompt,
-        format="json",
+        **({"format": "json"} if json_format else {}),
     )
-#    print(response)
     return response["response"]
 
 
@@ -33,9 +32,12 @@ Retourne uniquement un objet JSON avec exactement ces deux champs :
 
 Pour une demande où l'utilisateur donne un nouveau nom à l'agent,
 utilise l'intention "change_name" et place le nom dans "valeur".
+Si l'utilisateur parle de changer le nom sans donner de nom précis,
+utilise "change_name" et mets obligatoirement null dans "valeur".
+N'invente jamais de nom et ne transforme pas une explication en nom.
 Pour une question sur le nom de l'agent, utilise l'intention "ask_name".
 Pour toute demande non reconnue, utilise "unknown".
 
 Demande de l'utilisateur : {question}
 """
-    return ask_llm(prompt)
+    return ask_llm(prompt, json_format=True)
