@@ -29,10 +29,23 @@ class Agent:
             return f"Je m'appelle {self.name}."
 
         raw_result = analyze_intent(question)
-        result = json.loads(raw_result)
 
-        intention = result.get("intention", "unknown")
+        try:
+            result = json.loads(raw_result)
+        except json.JSONDecodeError:
+            return "Je n'ai pas compris la demande. Peux-tu reformuler ?"
+
+        if not isinstance(result, dict):
+            return "Je n'ai pas compris la demande. Peux-tu reformuler ?"
+
+        if set(result.keys()) != {"intention", "valeur"}:
+            return "Je n'ai pas compris la demande. Peux-tu reformuler ?"
+
+        intention = result.get("intention")
         value = result.get("valeur")
+
+        if intention not in {"change_name", "ask_name", "analyze_file", "unknown"}:
+            return "Je n'ai pas compris la demande. Peux-tu reformuler ?"
 
         if intention == "change_name":
             if not value or not str(value).strip():

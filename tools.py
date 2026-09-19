@@ -30,15 +30,15 @@ Retourne uniquement un objet JSON avec exactement ces deux champs :
 - "intention" : l'intention détectée
 - "valeur" : la valeur importante à mémoriser, ou null si aucune valeur n'est présente
 
-Si l'utilisateur demande d'analyser un fichier, un document, un texte ou un contenu de fichier,
-utilise l'intention "analyze_file" et place le chemin, le nom du fichier ou le contenu pertinent dans "valeur".
-Pour une demande où l'utilisateur donne un nouveau nom à l'agent,
-utilise l'intention "change_name" et place le nom dans "valeur".
-Si l'utilisateur parle de changer le nom sans donner de nom précis,
-utilise "change_name" et mets obligatoirement null dans "valeur".
-N'invente jamais de nom et ne transforme pas une explication en nom.
-Pour une question sur le nom de l'agent, utilise l'intention "ask_name".
-Pour toute demande non reconnue, utilise "unknown".
+Règles strictes :
+- Réponds uniquement avec du JSON brut, sans blocs de code, sans explication, sans commentaire.
+- Si l'utilisateur demande d'analyser un fichier, utilise l'intention "analyze_file" et place le chemin, le nom du fichier ou le contenu pertinent dans "valeur".
+- Si l'utilisateur donne un nouveau nom à l'agent, utilise l'intention "change_name" et place le nom dans "valeur".
+- Si l'utilisateur parle de changer le nom sans donner de nom précis, utilise "change_name" et mets obligatoirement null dans "valeur".
+- Si l'utilisateur demande le nom de l'agent, utilise l'intention "ask_name".
+- Si la demande est non reconnue ou vide, utilise "unknown" et mets null dans "valeur".
+- N'invente jamais de nom et ne transforme pas une explication en nom.
+- Ne renvoie jamais de texte libre.
 
 Demande de l'utilisateur : {question}
 """
