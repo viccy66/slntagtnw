@@ -1,0 +1,42 @@
+PROJET : hellovulkantexture
+TYPE : Qt 5 / Vulkan / texture sur quadrilatère
+
+FAITS ETABLIS
+- La ressource Qt embarque qt256.png, texture_vert.spv et texture_frag.spv.
+- createTexture charge :/qt256.png avec QImage.
+- L'image est convertie en RGBA8 prémultiplié.
+- Les pixels sont copiés vers une image Vulkan, avec image view et sampler.
+- Le shader fragment échantillonne la texture avec texture(tex, v_texcoord).
+- vertexData décrit quatre sommets avec coordonnées UV.
+- vkCmdDraw reçoit 4 sommets.
+- m_rotation est incrémentée à chaque frame et appliquée par une rotation autour de l'axe Z.
+- requestUpdate demande le rendu de la frame suivante.
+
+VISUEL PROBABLE AU LANCEMENT
+Une fenêtre affiche un quadrilatère recouvert par l'image qt256.png. Dans la ressource fournie, cette 
+image est le logo Qt, avec un fond vert et des lettres blanches. Le quadrilatère tourne continuellement 
+autour de son axe et est redessiné à chaque frame.
+
+COMPORTEMENT PROBABLE
+- La texture reste attachée au quadrilatère pendant sa rotation.
+- Le filtrage et le mode de répétition sont définis par le sampler et les coordonnées UV.
+- L'animation continue tant que la fenêtre reste ouverte.
+- Il n'y a pas de scène 3D complexe ni de géométrie multiple détectée.
+
+CHAINE DE RAISONNEMENT
+1. qt256.png est déclaré dans le fichier .qrc.
+2. createTexture le charge et le convertit en pixels RGBA.
+3. L'image Vulkan, son image view et son sampler rendent les pixels accessibles au pipeline.
+4. Le shader fragment lit la texture via les coordonnées UV.
+5. Les quatre sommets forment un quadrilatère.
+6. La rotation et requestUpdate produisent une animation continue.
+
+NIVEAU DE CERTITUDE
+- Utilisation de qt256.png comme texture : élevé.
+- Quadrilatère : élevé.
+- Rotation continue : élevé.
+- Contenu logo Qt vert/blanc : confirmé par la ressource image, mais pas par le seul nom du fichier.
+- Apparence exacte à l'écran : probable, pas observée par capture runtime.
+
+LIMITES
+Cette fiche sert de référence humaine indépendante pour l'audit ; elle ne doit pas être injectée dans Slntagt avant son analyse.

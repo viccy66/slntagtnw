@@ -108,6 +108,43 @@ def test_agent_uses_last_directory_for_directory_content_analysis(monkeypatch, t
     )
 
 
+def test_agent_requests_path_when_user_asks_for_another_directory(monkeypatch, tmp_path):
+    (tmp_path / "agent.py").write_text("class Agent: pass", encoding="utf-8")
+    monkeypatch.setattr(
+        agent_module,
+        "describe_directory_content",
+        lambda directory, entries: f"Analyse de {directory} avec {entries}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    agent.run(str(tmp_path))
+
+    assert agent.run("Analyse le contenu d'un autre répertoire") == (
+        "Quel répertoire veux-tu que j'analyse ?"
+    )
+
+
+def test_agent_analyzes_directory_when_user_provides_path_after_prompt(monkeypatch, tmp_path):
+    (tmp_path / "agent.py").write_text("class Agent: pass", encoding="utf-8")
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_intent",
+        lambda question: '{"intention": "analyze_directory", "valeur": null}',
+    )
+    monkeypatch.setattr(
+        agent_module,
+        "describe_directory_content",
+        lambda directory, entries: f"Analyse de {directory} avec {entries}",
+    )
+
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run("Analyse le contenu d'un autre répertoire") == (
+        "Quel répertoire veux-tu que j'analyse ?"
+    )
+    assert agent.run(str(tmp_path)) == f"Analyse de {tmp_path} avec ['agent.py']"
+
+
 def test_agent_distinguishes_list_from_analyze_directory_intentions(monkeypatch, tmp_path):
     (tmp_path / "agent.py").write_text("class Agent: pass", encoding="utf-8")
     monkeypatch.setattr(
@@ -127,4 +164,66 @@ def test_agent_distinguishes_list_from_analyze_directory_intentions(monkeypatch,
 
     assert agent.run("Que peux-tu me dire sur ce répertoire ?") == (
         f"Analyse de {tmp_path} avec ['agent.py']"
+    )
+
+
+def test_agent_uses_structure_analysis_for_current_directory(monkeypatch, tmp_path):
+    (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_structure",
+        lambda directory: f"Structure de {directory} lue par qwen3:4b",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    agent.run(str(tmp_path))
+
+    assert agent.run("Analyse la structure de ce répertoire") == (
+        f"Structure de {tmp_path} lue par qwen3:4b"
+    )
+
+
+def test_agent_preserves_structure_request_while_waiting_for_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_structure",
+        lambda directory: f"Structure de {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run("J'aimerais que tu analyses la structure d'un répertoire") == (
+        "Quel répertoire veux-tu que j'analyse ?"
+    )
+    assert agent.run(str(tmp_path)) == f"Structure de {tmp_path}"
+
+
+def test_agent_does_not_reuse_directory_for_new_structure_request(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_structure",
+        lambda directory: f"Structure de {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+    agent.run(str(tmp_path))
+
+    assert agent.run("J'aimerais que tu analyses la structure d'un répertoire.") == (
+        "Quel répertoire veux-tu que j'analyse ?"
+    )
+
+
+def test_agent_answers_precise_widget_question_from_current_directory(monkeypatch, tmp_path):
+    (tmp_path / "calculatorform.ui").write_text(
+        "<widget class='QSpinBox' name='inputSpinBox1'/>", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Précision {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    agent.run(str(tmp_path))
+
+    assert agent.run("Peux-tu préciser quels widgets sont utilisés ?") == (
+        f"Précision widgets et interface Qt pour {tmp_path}"
     )

@@ -1,0 +1,35 @@
+PROJET : calculatorbuilder
+TYPE : Qt 5 Widgets / formulaire chargé depuis un fichier .ui
+
+FAITS ETABLIS
+- La ressource calculatorform.ui décrit une fenêtre QWidget intitulée "Calculator Builder".
+- L'interface contient deux QSpinBox nommés inputSpinBox1 et inputSpinBox2.
+- Un QLabel outputWidget affiche initialement la valeur 0.
+- Les libellés visibles sont "Input 1", "+", "Input 2", "=", et "Output".
+- calculatorform.cpp charge le formulaire avec QUiLoader depuis :/forms/calculatorform.ui.
+- Les deux slots on_inputSpinBox*_valueChanged recalculent la somme des deux valeurs.
+
+VISUEL PROBABLE AU LANCEMENT
+Une petite fenêtre de formulaire intitulée "Calculator Builder" apparaît. Elle présente deux champs 
+numériques, séparés par un signe plus, puis un signe égal et une zone de résultat affichant 0.
+
+COMPORTEMENT PROBABLE
+- La modification du premier champ recalcule immédiatement la somme.
+- La modification du second champ fait de même.
+- Le résultat affiché est Input 1 + Input 2.
+- Il n'y a pas de rendu GPU ni d'animation visuelle détectée.
+
+CHAINE DE RAISONNEMENT
+1. Le fichier .ui décrit les widgets et leurs textes.
+2. QUiLoader construit cette interface au lancement.
+3. connectSlotsByName relie automatiquement les changements des QSpinBox aux slots correspondants.
+4. Chaque slot additionne les deux valeurs et écrit le résultat dans outputWidget.
+
+NIVEAU DE CERTITUDE
+- Composition de la fenêtre : élevé, directement décrite dans le .ui.
+- Calcul de la somme : élevé, directement visible dans les slots.
+- Taille finale et apparence native exacte des widgets : non déterminées précisément par les sources.
+
+LIMITES
+Cette fiche décrit le résultat probable déduit des sources ; elle ne constitue pas une capture d'écran 
+runtime.

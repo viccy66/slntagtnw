@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from ollama import Client
 
 
@@ -13,10 +15,12 @@ def tell_name() -> str:
     return "Je suis un agent autonome minimal."
 
 
-def ask_llm(prompt: str, json_format: bool = False) -> str:
+def ask_llm(
+  prompt: str, json_format: bool = False, model: str = "llama3.2"
+) -> str:
     client = Client(host="http://localhost:11434")
     response = client.generate(
-        model="llama3.2",
+    model=model,
         prompt=prompt,
         **({"format": "json"} if json_format else {}),
     )
@@ -78,3 +82,53 @@ Distingue clairement les observations certaines (ce qui est réellement présent
 Réponds en texte libre, en français, sans JSON.
 """
     return ask_llm(prompt)
+
+
+def analyze_project_structure(directory: str) -> str:
+  return analyze_project_detail(directory, "structure")
+
+
+def analyze_project_detail(directory: str, topic: str) -> str:
+  root = Path(directory)
+  allowed_suffixes = {".py", ".cpp", ".cc", ".c", ".h", ".hpp", ".pro", ".ui", ".qrc", ".cmake"}
+  ignored_directories = {".git", ".venv", "__pycache__", ".pytest_cache", "build"}
+  files = []
+
+  for path in sorted(root.rglob("*")):
+    if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
+      continue
+    if any(part in ignored_directories for part in path.relative_to(root).parts):
+      continue
+    files.append(path)
+
+  observations = []
+  for path in files[:20]:
+    try:
+      content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+      continue
+    observations.append(f"--- {path.relative_to(root)} ---\n{content[:12000]}")
+
+  if not observations:
+    return "Aucun fichier source lisible n'a été trouvé dans ce répertoire."
+
+  prompt = f"""
+Tu analyses uniquement le projet situé dans le répertoire {root}.
+Voici les fichiers effectivement lus :
+{chr(10).join(observations)}
+
+La demande de précision porte sur : {topic}.
+Réponds en français avec exactement quatre sections :
+1. Faits observés
+2. Réponse précise
+3. Preuves utilisées
+4. Limites de l'analyse
+
+Règles :
+- Ne cite que les fichiers et éléments présents dans les observations.
+- Ne mélange aucune connaissance d'un autre projet.
+- Un fait doit être directement visible dans le code.
+- Une interprétation doit être présentée comme probable.
+- Ne prétends pas avoir exécuté ou compilé le projet.
+"""
+  return ask_llm(prompt, model="qwen3:4b")

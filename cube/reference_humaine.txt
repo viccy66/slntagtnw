@@ -1,0 +1,42 @@
+PROJET : cube
+TYPE : Qt 5 OpenGL / QOpenGLWidget
+
+FAITS ETABLIS
+- MainWidget hérite de QOpenGLWidget.
+- Le projet charge cube.png comme texture OpenGL.
+- Deux shaders GLSL sont utilisés : vshader.glsl et fshader.glsl.
+- La géométrie contient les six faces d'un cube, avec coordonnées de texture.
+- Le dessin utilise un index buffer et glDrawElements avec 34 indices en triangle strips.
+- Le depth test et le back-face culling sont activés.
+- La projection est perspective, avec champ de vision de 45 degrés.
+- Un QBasicTimer déclenche les mises à jour environ toutes les 12 ms.
+- Le glissement de la souris modifie l'axe et la vitesse de rotation ; une friction ralentit 
+  ensuite le cube.
+
+VISUEL PROBABLE AU LANCEMENT
+Une fenêtre Qt affiche un cube 3D texturé sur fond noir. La texture provient de cube.png et recouvre 
+les faces du cube. Le cube peut tourner après un mouvement de souris, puis ralentir progressivement.
+
+COMPORTEMENT PROBABLE
+- Au démarrage, le cube est affiché avec sa texture et sa perspective.
+- Un mouvement de souris sur le widget donne une impulsion de rotation.
+- La rotation continue pendant que la vitesse diminue par friction.
+- La profondeur et le masquage des faces arrière donnent un rendu 3D crédible.
+
+CHAINE DE RAISONNEMENT
+1. initShaders compile et lie le vertex shader et le fragment shader.
+2. initTextures charge cube.png dans une QOpenGLTexture.
+3. GeometryEngine crée les VBO et l'index buffer des six faces.
+4. resizeGL configure la projection perspective.
+5. paintGL applique la rotation, lie la texture et appelle drawCubeGeometry.
+6. drawCubeGeometry configure les attributs position/coordonnées UV et appelle glDrawElements.
+7. timerEvent et update entretiennent l'animation après l'interaction.
+
+NIVEAU DE CERTITUDE
+- Cube, texture, shaders et dessin indexé : élevé.
+- Rotation après interaction souris : élevé.
+- Rotation visible dès le lancement sans interaction : non garantie ; la vitesse initiale est nulle.
+- Contenu précis de cube.png : dépend de la ressource image.
+
+LIMITES
+La fiche déduit le visuel du code et des ressources ; elle ne constitue pas une capture d'écran.

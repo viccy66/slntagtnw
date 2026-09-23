@@ -1,0 +1,47 @@
+PROJET : hellovulkancubes
+TYPE : Qt 5 Widgets / Vulkan / scène 3D instanciée
+
+FAITS ETABLIS
+- La fenêtre contient une zone Vulkan et un panneau d'informations/contrôles.
+- Le texte de l'interface indique une scène de meshes, un matériau Phong, une lumière, des buffers 
+  uniformes dynamiques, du threading QtConcurrent, MSAA 4x si disponible et une caméra FPS.
+- Les meshes embarqués comprennent block.buf et qt_logo.buf.
+- Le renderer prépare des pipelines Phong et des buffers de géométrie.
+- Les instances reçoivent des translations et des ajustements de couleur aléatoires.
+- La caméra permet de marcher et de se déplacer latéralement avec WASD, et de regarder autour de soi avec 
+  la souris.
+- Add new augmente le nombre d'instances ; Pause suspend ou reprend l'animation ; Use Qt logo change 
+  le mesh utilisé ; Quit ferme l'application.
+- Le compteur affiche le nombre d'instances.
+
+VISUEL PROBABLE AU LANCEMENT
+Une fenêtre affiche une scène 3D Vulkan composée d'objets géométriques instanciés, principalement 
+des cubes ou le logo Qt selon le choix de l'interface. Les objets sont répartis dans l'espace avec 
+des positions et variations de couleur, éclairés par une lumière selon un matériau Phong. 
+La caméra permet d'explorer la scène.
+
+COMPORTEMENT PROBABLE
+- Plusieurs instances sont préparées et dessinées à chaque frame.
+- La scène est animée et peut être mise en pause.
+- Add new ajoute des objets et met à jour le compteur.
+- Use Qt logo remplace le mesh de bloc par le mesh du logo Qt.
+- La souris oriente la caméra ; Shift+WASD permet de marcher et de se déplacer latéralement.
+- Le rendu peut utiliser le MSAA si le matériel le permet.
+
+CHAINE DE RAISONNEMENT
+1. Les ressources block.buf et qt_logo.buf fournissent les meshes.
+2. Les pipelines et shaders Phong calculent l'apparence éclairée.
+3. Les buffers d'instances fournissent position et variation de couleur pour chaque objet.
+4. La caméra construit la vue, puis les matrices projettent les meshes.
+5. Les commandes Vulkan dessinent les instances dans la zone de rendu.
+6. Les événements Qt modifient caméra, pause, mesh ou nombre d'instances.
+
+NIVEAU DE CERTITUDE
+- Scène 3D, meshes, caméra, contrôles et instanciation : élevé.
+- Nombre exact d'instances au premier affichage : dépend de l'initialisation du projet.
+- Forme exacte visible selon le contrôle Use Qt logo : dépend de l'état initial du bouton.
+- Position et couleurs exactes de chaque instance : variables, certaines étant aléatoires.
+
+LIMITES
+La fiche restitue une interprétation statique et probable ; elle ne prétend pas connaître 
+la composition exacte de chaque frame.

@@ -1,0 +1,45 @@
+PROJET : composition
+TYPE : Qt 5 Widgets / QPainter, avec possibilité d'utilisation d'OpenGL
+
+FAITS ETABLIS
+- Une fenêtre intitulée "Composition Modes" contient une zone de rendu et un panneau de contrôles.
+- Les ressources embarquées comprennent flower.jpg et flower_alpha.jpg.
+- La zone de rendu charge flower.jpg et lui applique flower_alpha.jpg comme canal alpha.
+- Le fond utilise un dégradé vertical de couleurs : rouge, jaune, vert, cyan, bleu, magenta, rouge.
+- Un cercle coloré avec alpha est dessiné par-dessus l'image.
+- Le cercle se déplace automatiquement lorsque l'animation est active.
+- Un timer met à jour l'affichage environ toutes les 15 ms, soit environ 60 images par seconde.
+- Les contrôles proposent de nombreux modes de composition QPainter, deux curseurs (couleur et alpha),
+  et les boutons Show Source, What's This?, Animated et éventuellement Use OpenGL.
+
+VISUEL PROBABLE AU LANCEMENT
+Une fenêtre divisée en deux parties apparaît : la composition graphique à gauche et les contrôles à droite.
+La zone graphique combine une photographie de fleur avec un masque d'opacité, un fond en dégradé
+multicolore et un cercle coloré semi-transparent qui se déplace. Le rendu change continuellement lorsque
+l'animation est active.
+
+COMPORTEMENT PROBABLE
+- Les boutons radio changent la manière dont le cercle et l'image sont combinés.
+- Le curseur Circle color modifie la teinte du cercle.
+- Le curseur Circle alpha modifie sa transparence.
+- Animated active ou désactive le mouvement automatique.
+- La souris peut intervenir sur la zone de rendu.
+- Le bouton Use OpenGL, lorsqu'il est disponible, change le chemin de rendu, pas nécessairement 
+  le résultat visuel attendu.
+
+CHAINE DE RAISONNEMENT
+1. Les images sont chargées depuis les ressources Qt.
+2. drawBase compose le dégradé et l'image avec des modes de composition.
+3. drawSource ajoute le cercle avec une couleur HSV et un alpha contrôlé.
+4. Le timer appelle la mise à jour et fait évoluer la position du cercle.
+5. Les boutons et curseurs modifient les paramètres du renderer.
+
+NIVEAU DE CERTITUDE
+- Ressources et contrôles : élevé.
+- Dégradé, fleur masquée et cercle : élevé, directement déduits du code de peinture.
+- Position exacte du cercle au premier instant : variable et non fixée visuellement.
+- Aspect exact des modes de composition : dépend des paramètres et de l'état choisi.
+
+LIMITES
+La fiche décrit le visuel probable à partir du code et des ressources ; elle ne remplace pas une
+observation runtime.
