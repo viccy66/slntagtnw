@@ -1,4 +1,5 @@
 import agent as agent_module
+import tools as tools_module
 from agent import Agent
 
 
@@ -227,3 +228,57 @@ def test_agent_answers_precise_widget_question_from_current_directory(monkeypatc
     assert agent.run("Peux-tu préciser quels widgets sont utilisés ?") == (
         f"Précision widgets et interface Qt pour {tmp_path}"
     )
+
+
+def test_analyze_project_detail_excludes_generated_qt_resource_artifacts(monkeypatch, tmp_path):
+    (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
+    (tmp_path / "composition.cpp").write_text(
+        "class CompositionWidget : public QWidget {};", encoding="utf-8"
+    )
+    (tmp_path / "qrc_composition.cpp").write_text(
+        "static const unsigned char qt_resource_data[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a };",
+        encoding="utf-8",
+    )
+    (tmp_path / "moc_composition.cpp").write_text(
+        "class MocGenerated {};", encoding="utf-8"
+    )
+
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "analyse OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    result = tools_module.analyze_project_detail(str(tmp_path), "structure")
+
+    assert result == "analyse OK"
+    assert "qrc_composition.cpp" not in captured["prompt"]
+    assert "moc_composition.cpp" not in captured["prompt"]
+    assert "main.cpp" in captured["prompt"]
+    assert "composition.cpp" in captured["prompt"]
+
+
+def test_analyze_project_detail_keeps_relevant_generated_ui_header(monkeypatch, tmp_path):
+    (tmp_path / "calculatorform.ui").write_text(
+        "<widget class='QWidget' name='CalculatorForm' />", encoding="utf-8"
+    )
+    (tmp_path / "ui_calculatorform.h").write_text(
+        "class Ui_CalculatorForm { public: QWidget *widget; };", encoding="utf-8"
+    )
+    (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
+
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "analyse OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    result = tools_module.analyze_project_detail(str(tmp_path), "structure")
+
+    assert result == "analyse OK"
+    assert "ui_calculatorform.h" in captured["prompt"]
+    assert "calculatorform.ui" in captured["prompt"]

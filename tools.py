@@ -91,7 +91,8 @@ def analyze_project_structure(directory: str) -> str:
 def analyze_project_detail(directory: str, topic: str) -> str:
   root = Path(directory)
   allowed_suffixes = {".py", ".cpp", ".cc", ".c", ".h", ".hpp", ".pro", ".ui", ".qrc", ".cmake"}
-  ignored_directories = {".git", ".venv", "__pycache__", ".pytest_cache", "build"}
+  ignored_directories = {".git", ".venv", "__pycache__", ".pytest_cache", "build", "dist", "release", "debug"}
+  ignored_file_names = {"moc_predefs.h"}
   files = []
 
   for path in sorted(root.rglob("*")):
@@ -99,15 +100,20 @@ def analyze_project_detail(directory: str, topic: str) -> str:
       continue
     if any(part in ignored_directories for part in path.relative_to(root).parts):
       continue
+    filename = path.name.lower()
+    if filename in ignored_file_names:
+      continue
     files.append(path)
 
   observations = []
-  for path in files[:20]:
+  for path in files[:25]:
+    if path.name.lower().startswith("moc_") or path.name.lower().startswith("qrc_"):
+      continue
     try:
       content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
       continue
-    observations.append(f"--- {path.relative_to(root)} ---\n{content[:12000]}")
+    observations.append(f"--- {path.relative_to(root)} ---\n{content[:6000]}")
 
   if not observations:
     return "Aucun fichier source lisible n'a été trouvé dans ce répertoire."
