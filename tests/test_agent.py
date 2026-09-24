@@ -274,6 +274,205 @@ def test_agent_analyzes_architecture_for_embedded_directory(monkeypatch, tmp_pat
     ) == f"Architecture architecture du projet pour {tmp_path}"
 
 
+def test_agent_answers_execution_flow_question_from_current_directory(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Flux {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+    agent.run(str(tmp_path))
+
+    assert agent.run(
+        "Peux-tu m'expliquer le flux d'exécution du projet ?"
+    ) == f"Flux flux d'exécution et point d'entrée pour {tmp_path}"
+
+
+def test_agent_requests_directory_for_unspecified_execution_flow(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Flux {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run(
+        "Peux-tu m'expliquer le flux d'exécution d'un projet ?"
+    ) == "Quel répertoire veux-tu que j'analyse ?"
+    assert agent.run(str(tmp_path)) == (
+        f"Flux flux d'exécution et point d'entrée pour {tmp_path}"
+    )
+
+
+def test_agent_analyzes_execution_flow_for_embedded_directory(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Flux {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run(
+        f"Peux-tu m'expliquer le flux d'exécution du projet {tmp_path} ?"
+    ) == f"Flux flux d'exécution et point d'entrée pour {tmp_path}"
+
+
+def test_agent_requests_visual_execution_flow_from_current_directory(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Visuel {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+    agent.run(str(tmp_path))
+
+    assert agent.run(
+        "Peux-tu représenter visuellement le flux d'exécution du projet ?"
+    ) == f"Visuel visualisation Mermaid du flux d'exécution pour {tmp_path}"
+
+
+def test_visual_execution_flow_prompt_requests_mermaid(monkeypatch, tmp_path):
+    (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "diagramme OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    assert tools_module.analyze_project_detail(
+        str(tmp_path), "visualisation Mermaid du flux d'exécution"
+    ) == "diagramme OK"
+    assert "bloc" in captured["prompt"]
+    assert "mermaid" in captured["prompt"]
+
+
+def test_visual_execution_flow_prompt_prioritizes_global_flow_and_unique_nodes(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { QApplication app; CalculatorForm form; form.show(); return app.exec(); }",
+        encoding="utf-8",
+    )
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "diagramme OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(
+        str(tmp_path), "visualisation Mermaid du flux d'exécution"
+    )
+
+    assert "flux global observé" in captured["prompt"]
+    assert "identifiants de nœuds Mermaid uniques" in captured["prompt"]
+    assert "app.exec()" in captured["prompt"]
+    assert "1:11" in captured["prompt"]
+
+
+def test_execution_flow_prompt_requires_ordered_runtime_steps(monkeypatch, tmp_path):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { QApplication app; CalculatorForm form; form.show(); return app.exec(); }",
+        encoding="utf-8",
+    )
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "flux OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(
+        str(tmp_path), "flux d'exécution et point d'entrée"
+    )
+
+    assert "pas seulement" in captured["prompt"]
+    assert "création de l'application" in captured["prompt"]
+    assert "`show()`" in captured["prompt"]
+    assert "`app.exec()`" in captured["prompt"]
+
+
+def test_execution_flow_prompt_distinguishes_framework_callbacks(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { QApplication app; MainWidget widget; widget.show(); return app.exec(); }",
+        encoding="utf-8",
+    )
+    (tmp_path / "mainwidget.cpp").write_text(
+        "void MainWidget::initializeGL() {}", encoding="utf-8"
+    )
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "flux OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(
+        str(tmp_path), "flux d'exécution et point d'entrée"
+    )
+
+    assert "flux confirmé par les appels de `main()`" in captured["prompt"]
+    assert "callbacks ou étapes de" in captured["prompt"]
+    assert "moment exact" in captured["prompt"]
+
+
+def test_execution_flow_prompt_distinguishes_setup_order_from_internal_details(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { QApplication app; CalculatorForm form; form.show(); return app.exec(); }",
+        encoding="utf-8",
+    )
+    (tmp_path / "calculatorform.cpp").write_text(
+        "CalculatorForm::CalculatorForm() { setupUi(this); }", encoding="utf-8"
+    )
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "flux OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(
+        str(tmp_path), "flux d'exécution et point d'entrée"
+    )
+
+    assert "présente cet ordre comme un fait observé" in captured["prompt"]
+    assert "détail interne de création" in captured["prompt"]
+
+
+def test_visual_execution_flow_prompt_allows_one_diagram_only_in_section_two(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { QApplication app; MainWidget widget; widget.show(); return app.exec(); }",
+        encoding="utf-8",
+    )
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "diagramme OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(
+        str(tmp_path), "visualisation Mermaid du flux d'exécution"
+    )
+
+    assert "sans titre" in captured["prompt"]
+    assert "La section 2 doit contenir" in captured["prompt"]
+    assert "ne doit apparaître nulle part ailleurs" in captured["prompt"]
+
+
 def test_analyze_project_detail_excludes_generated_qt_resource_artifacts(monkeypatch, tmp_path):
     (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
     (tmp_path / "composition.cpp").write_text(
@@ -326,3 +525,33 @@ def test_analyze_project_detail_keeps_relevant_generated_ui_header(monkeypatch, 
     assert result == "analyse OK"
     assert "ui_calculatorform.h" in captured["prompt"]
     assert "calculatorform.ui" in captured["prompt"]
+
+
+def test_analyze_project_detail_prioritizes_main_and_ignores_generated_files(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "main.cpp").write_text(
+        "int main() { return 0; }", encoding="utf-8"
+    )
+    for index in range(30):
+        (tmp_path / f"component_{index:02d}.cpp").write_text(
+            f"class Component{index} {{}};", encoding="utf-8"
+        )
+    for index in range(10):
+        (tmp_path / f"moc_component_{index:02d}.cpp").write_text(
+            "class Generated {};", encoding="utf-8"
+        )
+
+    captured = {}
+
+    def fake_ask_llm(prompt, json_format=False, model=None):
+        captured["prompt"] = prompt
+        return "analyse OK"
+
+    monkeypatch.setattr(tools_module, "ask_llm", fake_ask_llm)
+
+    tools_module.analyze_project_detail(str(tmp_path), "flux d'exécution")
+
+    assert "--- main.cpp ---" in captured["prompt"]
+    assert "relevé prioritaire des points d'entrée globaux" in captured["prompt"]
+    assert "moc_component_00.cpp" not in captured["prompt"]

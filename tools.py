@@ -105,10 +105,14 @@ def analyze_project_detail(directory: str, topic: str) -> str:
       continue
     files.append(path)
 
+  source_files = [
+    path for path in files
+    if not path.name.lower().startswith(("moc_", "qrc_"))
+  ]
+  source_files.sort(key=lambda path: (path.stem.lower() != "main", str(path).lower()))
+
   observations = []
-  for path in files[:25]:
-    if path.name.lower().startswith("moc_") or path.name.lower().startswith("qrc_"):
-      continue
+  for path in source_files[:25]:
     try:
       content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
@@ -118,12 +122,59 @@ def analyze_project_detail(directory: str, topic: str) -> str:
   if not observations:
     return "Aucun fichier source lisible n'a été trouvé dans ce répertoire."
 
+  entrypoint_observations = [
+    observation for observation in observations
+    if "int main(" in observation or "int main (" in observation
+  ]
+  entrypoint_context = "\n".join(entrypoint_observations)
+  if not entrypoint_context:
+    entrypoint_context = "Aucune fonction main() observée dans les fichiers lus."
+  visual_instructions = ""
+  if topic == "visualisation Mermaid du flux d'exécution":
+    visual_instructions = """
+Pour cette demande visuelle, réponds uniquement avec les quatre sections demandées, sans titre,
+commentaire ou diagramme avant la section 1. La section 2 doit contenir un seul diagramme Mermaid
+dans un bloc `mermaid`, et ce diagramme ne doit apparaître nulle part ailleurs dans la réponse.
+Construis d'abord le flux global observé, dans cet ordre lorsqu'il est présent :
+fonction `main()` -> création de l'application Qt -> création de la fenêtre ou du widget ->
+configuration de l'interface ou du rendu -> appel à `show()` -> appel à `app.exec()` ou boucle
+d'événements. Ajoute ensuite les détails techniques utiles comme les layouts, widgets, shaders
+ou ressources, en les reliant au composant concerné.
+- Utilise des identifiants de nœuds Mermaid uniques et stables.
+- Ne répète jamais un même nœud pour donner plusieurs numéros d'étape.
+- N'ajoute aucun numéro dans les libellés, notamment pas de forme comme `1:11`.
+- Ne représente que les étapes et relations visibles dans les observations ; omets une étape
+  absente plutôt que de l'inventer.
+- Après le diagramme, ajoute une courte phrase indiquant les étapes qui restent incertaines.
+"""
+  flow_instructions = ""
+  if topic == "flux d'exécution et point d'entrée":
+    flow_instructions = """
+Pour cette demande, la section 2 doit décrire le flux dans son ordre d'exécution, et pas seulement
+nommer le point d'entrée. Lorsque les appels sont observés, détaille explicitement la chaîne :
+fonction `main()` -> création de l'application -> création de la fenêtre ou du widget ->
+configuration éventuelle -> `show()` -> `app.exec()` ou boucle d'événements. Pour chaque étape,
+cite le fichier et l'appel correspondant. Si une étape n'est pas observée, indique-le sans la
+présenter comme un fait.
+- Distingue clairement le flux confirmé par les appels de `main()` des callbacks ou étapes de
+  cycle de vie Qt, OpenGL ou Vulkan comme `initializeGL()`, `createRenderer()` et les méthodes de
+  rendu. Ces étapes sont secondaires et leur moment exact doit être décrit comme dépendant du
+  framework lorsqu'il n'est pas directement ordonné dans le code observé.
+- Ne place pas un callback graphique comme une étape certaine entre deux appels de `main()` sans
+  preuve explicite de cet ordre.
+"""
+
   prompt = f"""
 Tu analyses uniquement le projet situé dans le répertoire {root}.
 Voici les fichiers effectivement lus :
 {chr(10).join(observations)}
 
+Pour l'analyse du flux d'exécution, voici le relevé prioritaire des points d'entrée globaux :
+{entrypoint_context}
+
 La demande de précision porte sur : {topic}.
+{visual_instructions}
+{flow_instructions}
 Réponds en français avec exactement quatre sections :
 1. Faits observés
 2. Réponse précise
@@ -135,6 +186,13 @@ Règles :
 - Ne mélange aucune connaissance d'un autre projet.
 - Un fait doit être directement visible dans le code.
 - Une interprétation doit être présentée comme probable.
+- Pour le flux d'exécution, cherche d'abord une fonction `main` dans les fichiers observés.
+  Un constructeur, `initializeGL()` ou `createRenderer()` est un point technique secondaire,
+  pas le point d'entrée global de l'application. Si aucune fonction `main` n'est observée,
+  indique explicitement que le point d'entrée global n'a pas été trouvé.
+- Lorsque le code montre qu'un constructeur configure l'interface avant l'appel à `show()`,
+  présente cet ordre comme un fait observé. Indique seulement que le détail interne de création
+  des widgets et des layouts n'est pas entièrement décrit si les observations sont incomplètes.
 - Ne prétends pas avoir exécuté ou compilé le projet.
 """
   return ask_llm(prompt, model="qwen3:4b")

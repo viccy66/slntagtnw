@@ -19,6 +19,7 @@ class Agent:
         self.last_directory: Path | None = None
         self.last_directory_entries: list[str] = []
         self.pending_intent: str | None = None
+        self.pending_flow_topic = "flux d'exécution et point d'entrée"
 
     def _load_name(self) -> str | None:
         try:
@@ -107,6 +108,14 @@ class Agent:
                 self.list_directory(str(direct_path))
                 return analyze_project_detail(str(direct_path), "architecture du projet")
 
+            if self.pending_intent == "analyze_flow":
+                print("......... Analyse du flux d'exécution ..........")
+                self.pending_intent = None
+                self.list_directory(str(direct_path))
+                return analyze_project_detail(
+                    str(direct_path), self.pending_flow_topic
+                )
+
             self.pending_intent = None
             return self.list_directory(str(direct_path))
 
@@ -135,7 +144,11 @@ class Agent:
             )
             return "Quel répertoire veux-tu que j'analyse ?"
         detail_topic = self._detail_topic(normalized)
-        if detail_topic == "architecture du projet":
+        if detail_topic in {
+            "architecture du projet",
+            "flux d'exécution et point d'entrée",
+            "visualisation Mermaid du flux d'exécution",
+        }:
             embedded_path = self._embedded_directory(question)
             if embedded_path is not None:
                 self.pending_intent = None
@@ -144,7 +157,12 @@ class Agent:
                 self.list_directory(str(embedded_path))
                 return analyze_project_detail(str(embedded_path), detail_topic)
             if "d'un projet" in normalized or "d’un projet" in normalized:
-                self.pending_intent = "analyze_architecture"
+                self.pending_intent = (
+                    "analyze_architecture"
+                    if detail_topic == "architecture du projet"
+                    else "analyze_flow"
+                )
+                self.pending_flow_topic = detail_topic
                 return "Quel répertoire veux-tu que j'analyse ?"
         if self.last_directory is not None and detail_topic:
             return analyze_project_detail(str(self.last_directory), detail_topic)
@@ -284,7 +302,11 @@ class Agent:
         topics = (
             (("preuves", "preuve"), "preuves observables"),
             (("hypothèses", "hypotheses"), "hypothèses et déductions"),
-            (("architecture", "architecte", "projet"), "architecture du projet"),
+            (("architecture", "architecte"), "architecture du projet"),
+            (("visuellement", "visuel", "diagramme", "mermaid"),
+             "visualisation Mermaid du flux d'exécution"),
+            (("flux", "exécution", "execution", "point d'entrée", "point d’entree"),
+             "flux d'exécution et point d'entrée"),
             (("classes", "classe"), "classes et héritages"),
             (("widgets", "widget"), "widgets et interface Qt"),
             (("dépendances", "dependances"), "dépendances et inclusions"),
