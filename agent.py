@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from tools import (
@@ -89,14 +90,22 @@ class Agent:
 
         if direct_path.is_dir():
             if self.pending_intent == "analyze_directory":
+                print("......... Analyse d'un répertoire ..........")
                 self.pending_intent = None
                 self.list_directory(str(direct_path))
                 return self.analyze_directory_content()
 
             if self.pending_intent == "analyze_structure":
+                print("......... Analyse d'une structure ..........")
                 self.pending_intent = None
                 self.list_directory(str(direct_path))
                 return analyze_project_structure(str(direct_path))
+
+            if self.pending_intent == "analyze_architecture":
+                print("......... Analyse de l'architecture du projet ..........")
+                self.pending_intent = None
+                self.list_directory(str(direct_path))
+                return analyze_project_detail(str(direct_path), "architecture du projet")
 
             self.pending_intent = None
             return self.list_directory(str(direct_path))
@@ -126,6 +135,17 @@ class Agent:
             )
             return "Quel répertoire veux-tu que j'analyse ?"
         detail_topic = self._detail_topic(normalized)
+        if detail_topic == "architecture du projet":
+            embedded_path = self._embedded_directory(question)
+            if embedded_path is not None:
+                self.pending_intent = None
+                if not embedded_path.is_dir():
+                    return "Quel est le chemin exact du répertoire du projet ?"
+                self.list_directory(str(embedded_path))
+                return analyze_project_detail(str(embedded_path), detail_topic)
+            if "d'un projet" in normalized or "d’un projet" in normalized:
+                self.pending_intent = "analyze_architecture"
+                return "Quel répertoire veux-tu que j'analyse ?"
         if self.last_directory is not None and detail_topic:
             return analyze_project_detail(str(self.last_directory), detail_topic)
         if (
@@ -264,6 +284,7 @@ class Agent:
         topics = (
             (("preuves", "preuve"), "preuves observables"),
             (("hypothèses", "hypotheses"), "hypothèses et déductions"),
+            (("architecture", "architecte", "projet"), "architecture du projet"),
             (("classes", "classe"), "classes et héritages"),
             (("widgets", "widget"), "widgets et interface Qt"),
             (("dépendances", "dependances"), "dépendances et inclusions"),
@@ -275,6 +296,11 @@ class Agent:
             if any(marker in question for marker in markers):
                 return topic
         return None
+
+    @staticmethod
+    def _embedded_directory(question: str) -> Path | None:
+        match = re.search(r"(?<!\S)(/[\w.@%+~=:-]+(?:/[\w.@%+~=:-]+)*)(?!\S)", question)
+        return Path(match.group(1)) if match else None
 
     def welcome(self) -> str:
         return welcome_message()

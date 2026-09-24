@@ -230,6 +230,50 @@ def test_agent_answers_precise_widget_question_from_current_directory(monkeypatc
     )
 
 
+def test_agent_answers_architecture_question_from_current_directory(monkeypatch, tmp_path):
+    (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
+    (tmp_path / "widget.h").write_text("class Widget {};", encoding="utf-8")
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Architecture {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    agent.run(str(tmp_path))
+
+    assert agent.run("Peux-tu me décrire l'architecture du projet ?") == (
+        f"Architecture architecture du projet pour {tmp_path}"
+    )
+
+
+def test_agent_requests_directory_for_unspecified_project_architecture(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Architecture {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run("Peux-tu me décrire l'architecture d'un projet ?") == (
+        "Quel répertoire veux-tu que j'analyse ?"
+    )
+    assert agent.run(str(tmp_path)) == f"Architecture architecture du projet pour {tmp_path}"
+
+
+def test_agent_analyzes_architecture_for_embedded_directory(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        agent_module,
+        "analyze_project_detail",
+        lambda directory, topic: f"Architecture {topic} pour {directory}",
+    )
+    agent = Agent(tmp_path / "history.jsonl")
+
+    assert agent.run(
+        f"Peux-tu me décrire l'architecture du projet {tmp_path} ?"
+    ) == f"Architecture architecture du projet pour {tmp_path}"
+
+
 def test_analyze_project_detail_excludes_generated_qt_resource_artifacts(monkeypatch, tmp_path):
     (tmp_path / "main.cpp").write_text("int main() { return 0; }", encoding="utf-8")
     (tmp_path / "composition.cpp").write_text(
